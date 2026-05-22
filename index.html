@@ -618,8 +618,8 @@ function showSpread(idx) {
   document.getElementById('spread-pos').textContent = (idx+1) + '/' + S.scenes.length;
 }
 
-function prevScene() { if (S.currentSpread > 0) showSpread(S.currentSpread - 1); }
-function nextScene() { if (S.currentSpread < S.scenes.length - 1) showSpread(S.currentSpread + 1); }
+function prevScene() { if ((S.currentSpread || 0) > 0) showSpread((S.currentSpread || 0) - 1); }
+function nextScene() { if ((S.currentSpread || 0) < S.scenes.length - 1) showSpread((S.currentSpread || 0) + 1); }
 
 function buildPromptSelector() {
   var sel = document.getElementById('prompt-scene-sel');
