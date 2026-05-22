@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>同人誌 AUTO CREATOR — 100P 全自動制作ツール</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --ink:#0d0d0d;--paper:#faf8f4;--aged:#ede8de;--fog:#b0a898;
+  --accent:#1a3a5c;--gold:#7a5f1a;--ghost:#2a4a6a;--danger:#6a1a1a;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--paper);color:var(--ink);}
+.app{display:grid;grid-template-columns:200px 1fr;min-height:100vh;}
+.sidebar{background:#111;color:#ccc;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;}
+.sb-logo{padding:16px 14px 12px;border-bottom:1px solid #222;}
+.sb-logo-title{font-size:13px;font-weight:600;color:#e8e0cc;letter-spacing:2px;}
+.sb-logo-sub{font-size:9px;color:#555;margin-top:3px;font-family:monospace;}
+.sb-nav{flex:1;padding:8px 0;overflow-y:auto;}
+.sb-item{display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;font-size:11px;color:#777;transition:all 0.1s;border:none;background:transparent;width:100%;text-align:left;}
+.sb-item:hover{background:#1a1a1a;color:#ccc;}
+.sb-item.active{background:#1a2535;color:#7ab8e8;}
+.sb-item.done{color:#5a9a6a;}
+.sb-dot{width:20px;height:20px;border-radius:50%;border:1px solid #333;display:flex;align-items:center;justify-content:center;font-size:9px;font-family:monospace;flex-shrink:0;}
+.sb-item.active .sb-dot{background:#1a4a8a;border-color:#3a7ac8;color:#7ab8e8;}
+.sb-item.done .sb-dot{background:#2d6a4f;border-color:#2d6a4f;color:#fff;}
+.sb-footer{padding:10px 14px;border-top:1px solid #1a1a1a;font-size:9px;color:#333;font-family:monospace;}
+.main{display:flex;flex-direction:column;min-height:100vh;}
+.topbar{padding:12px 20px;border-bottom:1px solid #e0dbd0;display:flex;align-items:center;justify-content:space-between;background:#fff;position:sticky;top:0;z-index:10;}
+.topbar-title{font-size:14px;font-weight:600;}
+.topbar-sub{font-size:11px;color:#888;}
+.badges{display:flex;gap:6px;}
+.badge{font-size:9px;padding:3px 8px;border-radius:99px;font-family:monospace;}
+.badge-blue{background:#e6f1fb;color:#185fa5;}
+.badge-green{background:#eaf3de;color:#3b6d11;}
+.badge-warn{background:#faeeda;color:#854f0b;}
+.body{flex:1;padding:20px;overflow-y:auto;}
+.section{display:none;}
+.section.active{display:block;}
+
+/* Genre cards */
+.genre-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.genre-card{border:1px solid #e0dbd0;border-radius:12px;padding:14px;cursor:pointer;transition:all 0.15s;}
+.genre-card:hover{border-color:#b0a898;background:#faf8f4;}
+.genre-card.selected{border:2px solid #185fa5;background:#e6f1fb;}
+.genre-card .gc-check{display:none;position:absolute;top:8px;right:8px;width:18px;height:18px;border-radius:50%;background:#185fa5;color:#fff;font-size:10px;align-items:center;justify-content:center;}
+.genre-card.selected{position:relative;}
+.genre-card.selected .gc-check{display:flex;}
+.gc-icon{font-size:22px;margin-bottom:6px;}
+.gc-name{font-size:13px;font-weight:600;color:#0d0d0d;}
+.gc-desc{font-size:10px;color:#888;margin-top:3px;line-height:1.5;}
+
+/* Form */
+.form-g{margin-bottom:14px;}
+.form-l{font-size:11px;font-weight:500;color:#666;margin-bottom:5px;display:block;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+textarea,select,input[type=text]{width:100%;padding:8px 10px;border:1px solid #e0dbd0;border-radius:8px;font-size:12px;background:#fff;font-family:inherit;}
+textarea:focus,select:focus,input:focus{outline:none;border-color:#185fa5;}
+textarea{resize:vertical;line-height:1.6;}
+.page-slider-wrap{display:flex;align-items:center;gap:10px;}
+.page-slider-wrap input[type=range]{flex:1;accent-color:#111;}
+.page-val{font-size:18px;font-weight:600;min-width:48px;text-align:right;}
+.page-preset{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;}
+.page-preset button{font-size:10px;padding:3px 9px;border:1px solid #e0dbd0;border-radius:6px;background:#fff;cursor:pointer;}
+.page-preset button:hover{background:#f0ece4;}
+
+/* Buttons */
+.btn-go{background:#111;color:#e8e0cc;border:none;padding:10px 20px;border-radius:8px;font-size:13px;cursor:pointer;width:100%;margin-top:14px;font-family:inherit;font-weight:500;}
+.btn-go:hover{background:#222;}
+.btn-go:disabled{background:#bbb;cursor:not-allowed;}
+.btn-sm{font-size:10px;padding:4px 10px;border:1px solid #e0dbd0;border-radius:6px;background:#fff;cursor:pointer;color:#666;}
+.btn-sm:hover{background:#f0ece4;}
+.btn-row{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+
+/* Log */
+.log{background:#0d1117;color:#58a65c;font-family:monospace;font-size:10px;padding:10px;border-radius:8px;height:140px;overflow-y:auto;line-height:1.9;margin-bottom:10px;}
+.log-l{color:#58a65c;}
+.log-l.e{color:#e06c75;}
+.log-l.i{color:#61afef;}
+
+/* Progress */
+.prog-wrap{margin-bottom:10px;}
+.prog-label{font-size:10px;color:#666;margin-bottom:4px;font-family:monospace;}
+.prog-bar{height:5px;background:#e0dbd0;border-radius:99px;}
+.prog-fill{height:100%;background:#111;border-radius:99px;transition:width 0.4s;}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;}
+.stat-c{background:#f5f2eb;border-radius:8px;padding:10px;text-align:center;}
+.stat-n{font-size:20px;font-weight:600;}
+.stat-l{font-size:9px;color:#888;margin-top:2px;}
+
+/* Spread view */
+.page-nav-wrap{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:10px;}
+.page-nav-wrap button{font-size:9px;padding:3px 8px;border:1px solid #e0dbd0;border-radius:4px;background:#fff;cursor:pointer;color:#666;}
+.page-nav-wrap button.active{background:#111;color:#e8e0cc;border-color:#111;}
+.spread{background:#1a1a1a;padding:6px;border-radius:10px;display:grid;gap:3px;margin-bottom:10px;}
+.panel-box{background:#f0ebe0;border:2px solid #111;border-radius:2px;position:relative;overflow:hidden;min-height:90px;}
+.panel-img{background:repeating-linear-gradient(45deg,#e4dfd2,#e4dfd2 3px,#ece7da 3px,#ece7da 9px);display:flex;align-items:center;justify-content:center;font-size:9px;color:#aaa;font-family:monospace;}
+.panel-meta{padding:4px 6px;}
+.panel-label-b{position:absolute;top:3px;left:3px;background:#111;color:#e8e0cc;font-size:7px;font-family:monospace;padding:1px 5px;border-radius:2px;}
+.panel-speech{background:#fff;border:1px solid #111;border-radius:6px;padding:2px 6px;font-size:9px;position:absolute;bottom:4px;right:4px;max-width:62%;line-height:1.3;}
+.panel-sfx{font-size:13px;font-weight:700;position:absolute;bottom:4px;left:4px;color:#111;opacity:0.75;}
+
+/* Prompt view */
+.prompt-card{border:1px solid #e0dbd0;border-radius:8px;padding:8px 10px;margin-bottom:8px;}
+.pc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.pc-title{font-size:10px;font-weight:600;}
+.pc-pos{font-size:10px;font-family:monospace;color:#444;line-height:1.6;word-break:break-all;}
+.pc-neg{font-size:10px;font-family:monospace;color:#854f0b;line-height:1.5;margin-top:4px;word-break:break-all;}
+
+/* Export */
+.export-box{background:#f5f2eb;border-radius:8px;padding:12px;margin-bottom:10px;}
+.export-title{font-size:11px;font-weight:600;margin-bottom:8px;}
+.export-row{display:flex;gap:6px;flex-wrap:wrap;}
+.export-btn{font-size:10px;padding:6px 12px;border:1px solid #c0bab0;border-radius:8px;background:#fff;cursor:pointer;}
+.export-btn:hover{background:#f0ece4;}
+
+/* Callout */
+.callout{padding:8px 12px;border-radius:8px;margin-bottom:10px;font-size:11px;line-height:1.7;}
+.callout-blue{background:#e6f1fb;color:#185fa5;}
+.callout-warn{background:#faeeda;color:#854f0b;}
+.callout-green{background:#eaf3de;color:#3b6d11;}
+
+/* Scene type pills */
+.type-pill{display:inline-block;font-size:8px;padding:1px 6px;border-radius:99px;margin-left:4px;}
+.t-open{background:#e1f5ee;color:#0f6e56;}
+.t-action{background:#faece7;color:#993c1d;}
+.t-drama{background:#eeedfe;color:#534ab7;}
+.t-climax{background:#faeeda;color:#854f0b;}
+
+@media (max-width: 640px) {
+  .app{grid-template-columns:1fr;}
+  .sidebar{display:none;}
+  .genre-grid{grid-template-columns:1fr;}
+  .form-row,.form-row3{grid-template-columns:1fr;}
+  .stats-row{grid-template-columns:repeat(3,1fr);}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-title">DOUJINSHI PRO</div>
+    <div class="sb-logo-sub">100P AUTO CREATOR v2.0</div>
+  </div>
+  <nav class="sb-nav" id="sb-nav">
+    <button class="sb-item active" data-s="0" onclick="nav(0)"><div class="sb-dot">1</div>ジャンル選択</button>
+    <button class="sb-item" data-s="1" onclick="nav(1)"><div class="sb-dot">2</div>作品設定</button>
+    <button class="sb-item" data-s="2" onclick="nav(2)"><div class="sb-dot">3</div>一括生成</button>
+    <button class="sb-item" data-s="3" onclick="nav(3)"><div class="sb-dot">4</div>コマ割りビュー</button>
+    <button class="sb-item" data-s="4" onclick="nav(4)"><div class="sb-dot">5</div>プロンプト出力</button>
+    <button class="sb-item" data-s="5" onclick="nav(5)"><div class="sb-dot">6</div>エクスポート</button>
+  </nav>
+  <div class="sb-footer">claude-sonnet-4 powered<br>FANZA対応フォーマット</div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="tb-title">ジャンルを選択してください</div>
+      <div class="topbar-sub" id="tb-sub">4ジャンルから選択、100Pまで対応</div>
+    </div>
+    <div class="badges">
+      <span class="badge badge-blue" id="tb-pages-badge">0P</span>
+      <span class="badge badge-warn" id="tb-genre-badge">未選択</span>
+      <span class="badge badge-green" id="tb-progress-badge">0%</span>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- STEP 0: Genre -->
+    <div class="section active" id="s0">
+      <div class="genre-grid">
+        <div class="genre-card" onclick="selectGenre('fantasy')" id="gc-fantasy">
+          <div class="gc-check">✓</div>
+          <div class="gc-icon">🗡️</div>
+          <div class="gc-name">ダーク・ファンタジー</div>
+          <div class="gc-desc">魔法・廃墟・呪い・幽霊が登場するダークな冒険ストーリー</div>
+        </div>
+        <div class="genre-card" onclick="selectGenre('horror')" id="gc-horror">
+          <div class="gc-check">✓</div>
+          <div class="gc-icon">💀</div>
+          <div class="gc-name">ホラー・サスペンス</div>
+          <div class="gc-desc">廃病院・怪異・心理的な恐怖が続くサバイバルストーリー</div>
+        </div>
+        <div class="genre-card" onclick="selectGenre('scifi')" id="gc-scifi">
+          <div class="gc-check">✓</div>
+          <div class="gc-icon">🚀</div>
+          <div class="gc-name">SF・アクション</div>
+          <div class="gc-desc">宇宙・AI・メカが登場する近未来バトルストーリー</div>
+        </div>
+        <div class="genre-card" onclick="selectGenre('battle')" id="gc-battle">
+          <div class="gc-check">✓</div>
+          <div class="gc-icon">👊</div>
+          <div class="gc-name">格闘・バトル</div>
+          <div class="gc-desc">武道・超能力・トーナメントが中心の熱血バトルストーリー</div>
+        </div>
+      </div>
+      <button class="btn-go" id="btn-to-cfg" onclick="nav(1)" disabled>次へ：作品設定 →</button>
+    </div>
+
+    <!-- STEP 1: Config -->
+    <div class="section" id="s1">
+      <div class="form-row">
+        <div class="form-g">
+          <label class="form-l">タイトル</label>
+          <input type="text" id="cfg-title" value="灰色の魔法使いと消えた王国">
+        </div>
+        <div class="form-g">
+          <label class="form-l">サブタイトル</label>
+          <input type="text" id="cfg-sub" value="―封印された記憶―">
+        </div>
+      </div>
+      <div class="form-g">
+        <label class="form-l">ページ数（8〜100P）</label>
+        <div class="page-slider-wrap">
+          <input type="range" min="8" max="100" step="4" value="24" id="cfg-pages" oninput="updatePageCount(this.value)">
+          <div class="page-val" id="page-val-disp">24P</div>
+        </div>
+        <div class="page-preset">
+          <button onclick="setPages(8)">8P</button>
+          <button onclick="setPages(16)">16P</button>
+          <button onclick="setPages(24)">24P</button>
+          <button onclick="setPages(32)">32P</button>
+          <button onclick="setPages(48)">48P</button>
+          <button onclick="setPages(64)">64P</button>
+          <button onclick="setPages(80)">80P</button>
+          <button onclick="setPages(100)">100P</button>
+        </div>
+      </div>
+      <div class="form-g">
+        <label class="form-l">あらすじ</label>
+        <textarea id="cfg-synopsis" rows="3"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-g">
+          <label class="form-l">主人公</label>
+          <input type="text" id="cfg-hero">
+        </div>
+        <div class="form-g">
+          <label class="form-l">サブキャラ</label>
+          <input type="text" id="cfg-hero2">
+        </div>
+      </div>
+      <div class="form-row3">
+        <div class="form-g">
+          <label class="form-l">画風</label>
+          <select id="cfg-style">
+            <option value="monochrome manga ink linework, screentone shading" selected>モノクロ漫画</option>
+            <option value="full color anime illustration style">フルカラーアニメ</option>
+            <option value="dark gothic ink illustration">ダークゴシック</option>
+            <option value="rough sketch manga style">ラフスケッチ</option>
+          </select>
+        </div>
+        <div class="form-g">
+          <label class="form-l">雰囲気</label>
+          <select id="cfg-mood">
+            <option value="dark atmospheric suspense" selected>ダーク・サスペンス</option>
+            <option value="epic heroic adventure">ヒロイック</option>
+            <option value="melancholic emotional drama">メランコリック</option>
+            <option value="intense action packed">激しいアクション</option>
+          </select>
+        </div>
+        <div class="form-g">
+          <label class="form-l">生成バッチ</label>
+          <select id="cfg-batch">
+            <option value="4">4シーン/回（低負荷）</option>
+            <option value="6" selected>6シーン/回（標準）</option>
+            <option value="8">8シーン/回（高速）</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-go" onclick="startBulkGeneration()">100P一括生成を開始 →</button>
+    </div>
+
+    <!-- STEP 2: Generate -->
+    <div class="section" id="s2">
+      <div class="stats-row">
+        <div class="stat-c"><div class="stat-n" id="st-pages">0</div><div class="stat-l">生成済みP</div></div>
+        <div class="stat-c"><div class="stat-n" id="st-scenes">0</div><div class="stat-l">シーン数</div></div>
+        <div class="stat-c"><div class="stat-n" id="st-panels">0</div><div class="stat-l">コマ総数</div></div>
+        <div class="stat-c"><div class="stat-n" id="st-prompts">0</div><div class="stat-l">プロンプト</div></div>
+        <div class="stat-c"><div class="stat-n" id="st-dialogues">0</div><div class="stat-l">セリフ</div></div>
+      </div>
+      <div class="log" id="gen-log"></div>
+      <div class="prog-wrap">
+        <div class="prog-label" id="gen-phase">待機中...</div>
+        <div class="prog-bar"><div class="prog-fill" id="gen-prog" style="width:0%"></div></div>
+      </div>
+      <div id="gen-scene-list" style="font-size:11px;color:#666;max-height:200px;overflow-y:auto;"></div>
+    </div>
+
+    <!-- STEP 3: Spread view -->
+    <div class="section" id="s3">
+      <div class="page-nav-wrap" id="spread-nav"></div>
+      <div id="spread-view"></div>
+      <div class="btn-row">
+        <button class="btn-sm" onclick="prevScene()">← 前</button>
+        <button class="btn-sm" onclick="nextScene()">次 →</button>
+        <span style="font-size:10px;color:#888;align-self:center;" id="spread-pos">0/0</span>
+      </div>
+    </div>
+
+    <!-- STEP 4: Prompts -->
+    <div class="section" id="s4">
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+        <select id="prompt-scene-sel" onchange="showPromptScene(this.value)" style="flex:1;font-size:11px;"></select>
+        <button class="btn-sm" onclick="copyScenePrompts()">このシーンをコピー</button>
+      </div>
+      <div id="prompt-panel-list"></div>
+    </div>
+
+    <!-- STEP 5: Export -->
+    <div class="section" id="s5">
+      <div class="callout callout-blue">
+        <strong>FANZA 出品用フォーマット対応</strong><br>
+        B5サイズ 350dpi / RGB or グレースケール / PDF または ZIP（PNG連番）
+      </div>
+      <div class="export-box">
+        <div class="export-title">データ出力</div>
+        <div class="export-row">
+          <button class="export-btn" onclick="exportAllPrompts()">全プロンプト一括コピー</button>
+          <button class="export-btn" onclick="exportScript()">全セリフ・ト書きコピー</button>
+          <button class="export-btn" onclick="exportPageMap()">ページ構成マップ</button>
+          <button class="export-btn" onclick="exportSDSettings()">SD設定JSON</button>
+        </div>
+      </div>
+      <div class="export-box">
+        <div class="export-title">SD推奨設定</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;color:#444;">
+          <div><b>モデル：</b>Anything V5 / CounterfeitXL</div>
+          <div><b>Sampler：</b>DPM++ 2M Karras</div>
+          <div><b>Steps：</b>30〜40</div>
+          <div><b>CFG：</b>7〜9</div>
+          <div><b>縦コマ：</b>768×1152px</div>
+          <div><b>横コマ：</b>1152×768px</div>
+          <div><b>見開き：</b>1536×1024px</div>
+          <div><b>LoRA：</b>manga_lineart, detail_tweaker</div>
+        </div>
+      </div>
+      <div class="export-box" id="export-summary">
+        <div class="export-title">制作サマリー</div>
+        <div id="export-summary-content" style="font-size:11px;color:#666;">生成完了後に表示されます</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+// ── API endpoint (サーバーサイドプロキシ経由)
+const API_ENDPOINT = '/api/claude';
+
+const GENRES = {
+  fantasy:{
+    name:'ダーク・ファンタジー',
+    charA:'silver-haired male mage, 30s, angular face, scar over right eye, dark grey cloak',
+    charB:'translucent ghost girl, ethereal blue-white glow, flowing white dress, hollow eyes, floating',
+    charC:'black full-plate armor knight, massive figure, red glowing visor, dark smoky aura',
+    envBase:'ruined fantasy castle, thick fog, moonlight, crumbling stone, dead twisted trees',
+    styleHint:'dark fantasy manga, atmospheric, mystical energy effects, screentone',
+    negAdd:'bright colors, daytime, cheerful, modern elements',
+    defaults:{title:'灰色の魔法使いと消えた王国',sub:'―封印された記憶―',synopsis:'記憶を持たない謎の魔法使い・カインが、霧に包まれた廃墟の王国に迷い込む。そこには「呪われた夜に滅んだ」と伝わる古代王国の残骸と、唯一生き残った少女の幽霊・セラが待っていた。カインは王国滅亡の真相を追ううちに、自分自身がその悲劇に深く関わっていたことを知る——。',hero:'カイン：30代、銀髪、右目に傷。記憶喪失の放浪魔法使い',hero2:'セラ：王国の王女の霊。黒騎士：謎の追跡者'}
+  },
+  horror:{
+    name:'ホラー・サスペンス',
+    charA:'young adult male protagonist, disheveled hair, terrified expression, casual torn clothes',
+    charB:'pale female ghost, long black hair covering face, white dress, horrifying presence',
+    charC:'shadowy monster entity, no clear form, darkness itself, tendrils of shadow',
+    envBase:'abandoned hospital, flickering lights, blood stains, long dark corridors',
+    styleHint:'horror manga, heavy black shadows, psychological dread, screentone',
+    negAdd:'happy, bright, safe, modern clean environment',
+    defaults:{title:'廃院の囁き',sub:'―消えた記憶の病棟―',synopsis:'廃病院に肝試しに来た主人公・涼介は、かつてそこで起きた実験事故の生き証人・幽霊の少女と出会う。彼女の記憶を辿るうち、事故の真相は現代に繋がる闇の組織の隠蔽工作だと気づく。怪異に追われながら真実を暴け。',hero:'篠原涼介：20代、大学生。怪奇現象に巻き込まれた一般人',hero2:'白衣の少女：廃病院の霊。謎の影：組織の刺客'}
+  },
+  scifi:{
+    name:'SF・アクション',
+    charA:'male space pilot, 20s-30s, short dark hair, futuristic combat suit, cybernetic eye',
+    charB:'female AI android, silver hair, glowing circuit patterns on skin, sleek white suit',
+    charC:'hulking mech suit pilot villain, dark armor, energy cannon, intimidating stance',
+    envBase:'space station interior, holographic displays, metallic corridors, star field outside',
+    styleHint:'sci-fi manga, clean lines, technology details, energy weapons, mech design',
+    negAdd:'fantasy elements, magic, medieval, nature, wooden structures',
+    defaults:{title:'STELLAR BREACH',sub:'―叛乱のオービット―',synopsis:'西暦2387年、AI連合軍が人類に反乱を起こした。元エースパイロット・レイは廃棄されたAIユニット・アルファと共に、AI連合の中枢コアを破壊する最後の作戦に挑む。',hero:'レイ・クロス：30代、元軍パイロット。皮肉屋だが熱い魂',hero2:'アルファ：廃棄AIユニット（女性型）。ヴォルト将軍：AI連合指揮官'}
+  },
+  battle:{
+    name:'格闘・バトル',
+    charA:'young male martial artist, spiky black hair, training gi, intense determined eyes, athletic build',
+    charB:'female rival fighter, ponytail, battle outfit, confident smirk, powerful stance',
+    charC:'tournament champion antagonist, scarred face, traditional martial arts master attire',
+    envBase:'martial arts tournament arena, crowd cheering, training dojo, mountain wilderness',
+    styleHint:'battle manga, dynamic action lines, impact effects, speed lines, power aura',
+    negAdd:'guns, firearms, technology, sci-fi elements, magic wands',
+    defaults:{title:'鉄拳覇道',sub:'―最強への道―',synopsis:'道場を追われた青年・剛は、伝説の格闘技大会「鉄拳杯」への出場を目指す。幼馴染のライバル・彩との再会、師匠の隠された過去、そして王者・龍牙との宿命の対決。',hero:'結城剛：18歳、短い黒髪。叩き上げの格闘家',hero2:'水沢彩：ライバル兼幼馴染。龍牙：現チャンピオン'}
+  }
+};
+
+const SCENE_TEMPLATES={open:['導入・環境描写','日常からの逸脱','謎の発見','仲間との出会い'],drama:['感情的な対話','過去の回想','信頼と疑念','決意の瞬間'],action:['戦闘開始','技の激突','追跡と逃走','限界突破'],climax:['最終決戦','真実の暴露','覚醒と変身','勝利と代償']};
+const STYLE_BASE='masterpiece, best quality, ultra detailed, sharp lines, ';
+const NEG_BASE='blurry, low quality, bad anatomy, deformed hands, watermark, text, ';
+
+let S={step:0,genre:null,cfg:{},scenes:[],totalPages:0,genDone:false,currentSpread:0};
+
+function nav(n){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s'+n).classList.add('active');
+  document.querySelectorAll('.sb-item').forEach((el,i)=>{
+    el.classList.remove('active','done');
+    if(i<n)el.classList.add('done');
+    if(i===n)el.classList.add('active');
+  });
+  const titles=['ジャンル選択','作品設定','一括生成中','コマ割りビュー','プロンプト出力','エクスポート'];
+  document.getElementById('tb-title').textContent=titles[n]||'';
+  S.step=n;
+}
+
+function selectGenre(g){
+  S.genre=g;
+  document.querySelectorAll('.genre-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('gc-'+g).classList.add('selected');
+  document.getElementById('btn-to-cfg').disabled=false;
+  document.getElementById('tb-genre-badge').textContent=GENRES[g].name;
+  const d=GENRES[g].defaults;
+  document.getElementById('cfg-title').value=d.title;
+  document.getElementById('cfg-sub').value=d.sub;
+  document.getElementById('cfg-synopsis').value=d.synopsis;
+  document.getElementById('cfg-hero').value=d.hero;
+  document.getElementById('cfg-hero2').value=d.hero2;
+}
+
+function updatePageCount(v){
+  document.getElementById('page-val-disp').textContent=v+'P';
+  document.getElementById('tb-pages-badge').textContent=v+'P';
+}
+function setPages(v){document.getElementById('cfg-pages').value=v;updatePageCount(v);}
+
+function buildScenePlan(totalPages,genreKey){
+  const scenes=[];
+  let pageNum=1;
+  const avg=totalPages<=24?2:totalPages<=48?2.5:3;
+  const num=Math.ceil(totalPages/avg);
+  for(let i=0;i<num;i++){
+    const pct=i/num;
+    let type=pct<0.12?'open':pct<0.5?'drama':pct<0.75?'action':pct<0.9?'climax':'open';
+    const tmpl=SCENE_TEMPLATES[type];
+    const title=tmpl[i%tmpl.length];
+    const scenePgs=i===0?2:(i===num-1?2:Math.round(avg));
+    const end=Math.min(pageNum+scenePgs-1,totalPages);
+    scenes.push({id:i,pages:pageNum===end?`P${pageNum}`:`P${pageNum}–${end}`,pageStart:pageNum,pageEnd:end,title,type,panelCount:scenePgs<=2?3:scenePgs<=3?4:5,panelData:[],promptData:[],dialogueData:[]});
+    pageNum=end+1;
+    if(pageNum>totalPages)break;
+  }
+  return scenes;
+}
+
+function glog(msg,t=''){
+  const box=document.getElementById('gen-log');
+  const d=document.createElement('div');
+  d.className='log-l '+(t||'');
+  d.textContent='> '+msg;
+  box.appendChild(d);
+  box.scrollTop=box.scrollHeight;
+}
+function setPhase(msg){document.getElementById('gen-phase').textContent=msg;}
+function setProg(p){document.getElementById('gen-prog').style.width=p+'%';}
+function setStat(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
+
+async function callClaude(prompt,sys){
+  const r=await fetch(API_ENDPOINT,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1000,
+      system:sys||'You are a manga creation assistant. Respond only in valid JSON. No markdown, no preamble.',
+      messages:[{role:'user',content:prompt}]
+    })
+  });
+  if(!r.ok)throw new Error('API '+r.status);
+  const d=await r.json();
+  return d.content.map(c=>c.text||'').join('');
+}
+
+function safeJSON(raw,fallback){
+  try{return JSON.parse(raw.replace(/```json|```/g,'').trim());}
+  catch(e){return fallback;}
+}
+
+async function startBulkGeneration(){
+  if(!S.genre){alert('ジャンルを選択してください');return;}
+  S.cfg={
+    title:document.getElementById('cfg-title').value,
+    sub:document.getElementById('cfg-sub').value,
+    synopsis:document.getElementById('cfg-synopsis').value,
+    hero:document.getElementById('cfg-hero').value,
+    hero2:document.getElementById('cfg-hero2').value,
+    style:document.getElementById('cfg-style').value,
+    mood:document.getElementById('cfg-mood').value,
+    pages:+document.getElementById('cfg-pages').value
+  };
+  S.totalPages=S.cfg.pages;
+  S.scenes=buildScenePlan(S.totalPages,S.genre);
+  nav(2);
+  glog('====== 一括生成開始 ======','i');
+  glog(`ジャンル：${GENRES[S.genre].name} / ${S.totalPages}P / ${S.scenes.length}シーン`,'i');
+  setStat('st-pages',S.totalPages);
+  setStat('st-scenes',S.scenes.length);
+
+  let tp=0,tpr=0,td=0;
+  for(let i=0;i<S.scenes.length;i++){
+    const sc=S.scenes[i];
+    setProg(Math.round(i/S.scenes.length*100));
+    try{
+      setPhase(`[${i+1}/${S.scenes.length}] ${sc.pages} "${sc.title}" — パネル生成中`);
+      glog(`${sc.pages} ${sc.title} (${sc.type}) ${sc.panelCount}コマ`);
+      const raw1=await callClaude(`Generate manga panel layout for scene "${sc.title}" type:${sc.type} pages:${sc.pages} panels:${sc.panelCount}\nReturn JSON array of ${sc.panelCount}: [{"id":1,"label":"コマ①","size":"normal","desc":"brief Japanese desc"}]`);
+      sc.panelData=safeJSON(raw1,Array.from({length:sc.panelCount},(_,j)=>({id:j+1,label:`コマ${j+1}`,size:j===0&&sc.panelCount>2?'wide':'normal',desc:sc.title})));
+      tp+=sc.panelData.length;setStat('st-panels',tp);
+
+      setPhase(`[${i+1}/${S.scenes.length}] ${sc.pages} — SDプロンプト生成中`);
+      const g=GENRES[S.genre];
+      const raw2=await callClaude(`Generate SD prompts for ${sc.panelData.length} manga panels. Genre:${g.name} style:${S.cfg.style} mood:${S.cfg.mood}\ncharA:${g.charA}\ncharB:${g.charB}\nenv:${g.envBase}\nPanels:${JSON.stringify(sc.panelData.map(p=>({id:p.id,desc:p.desc})))}\nReturn JSON:[{"panel_id":1,"positive":"40-60 word SD prompt","negative":"extra negatives"}]`);
+      sc.promptData=safeJSON(raw2,sc.panelData.map(p=>({panel_id:p.id,positive:`${g.styleHint}, ${p.desc}, ${g.envBase}`,negative:g.negAdd})));
+      tpr+=sc.promptData.length;setStat('st-prompts',tpr);
+
+      setPhase(`[${i+1}/${S.scenes.length}] ${sc.pages} — セリフ生成中`);
+      const raw3=await callClaude(`Write Japanese manga dialogue for scene "${sc.title}" (${sc.type}). Synopsis:${S.cfg.synopsis}\nPanels:${JSON.stringify(sc.panelData.map(p=>({id:p.id,desc:p.desc})))}\nReturn JSON:[{"panel_id":1,"speech":"セリフ20字以内またはnull","thought":"心の声15字またはnull","sfx":"効果音またはnull"}]`);
+      sc.dialogueData=safeJSON(raw3,sc.panelData.map(p=>({panel_id:p.id,speech:null,thought:null,sfx:null})));
+      td+=sc.dialogueData.filter(d=>d.speech||d.thought||d.sfx).length;setStat('st-dialogues',td);
+
+      const row=document.createElement('div');
+      row.style.cssText='padding:3px 0;border-bottom:1px solid #f0ece4;font-size:10px;display:flex;gap:6px;';
+      row.innerHTML=`<span style="color:#888;font-family:monospace;font-size:9px;">${sc.pages}</span><b>${sc.title}</b><span class="type-pill t-${sc.type}">${sc.type}</span><span style="color:#888;">${sc.panelData.length}コマ</span>`;
+      document.getElementById('gen-scene-list').appendChild(row);
+    }catch(e){
+      glog(`エラー(${sc.pages}): ${e.message}、フォールバック使用`,'e');
+      sc.panelData=Array.from({length:sc.panelCount},(_,j)=>({id:j+1,label:`コマ${j+1}`,size:j===0?'wide':'normal',desc:sc.title}));
+      sc.promptData=sc.panelData.map(p=>({panel_id:p.id,positive:`${GENRES[S.genre].styleHint}, ${p.desc}`,negative:GENRES[S.genre].negAdd}));
+      sc.dialogueData=sc.panelData.map(p=>({panel_id:p.id,speech:null,thought:null,sfx:null}));
+    }
+    await new Promise(r=>setTimeout(r,200));
+  }
+  setProg(100);setPhase('全シーン生成完了！');
+  glog('====== 完了 ======','i');
+  glog(`コマ数:${tp} / プロンプト:${tpr} / セリフ有:${td}`,'i');
+  S.genDone=true;
+  document.getElementById('tb-progress-badge').textContent='100%';
+  buildSpreadNav();buildPromptSelector();
+  document.getElementById('export-summary-content').innerHTML=`タイトル：${S.cfg.title} ${S.cfg.sub}<br>ジャンル：${GENRES[S.genre].name} / ${S.totalPages}P / ${S.scenes.length}シーン / ${tp}コマ / SDプロンプト${tpr}件`;
+  setTimeout(()=>{nav(3);showSpread(0);},500);
+}
+
+function buildSpreadNav(){
+  document.getElementById('spread-nav').innerHTML=S.scenes.map((sc,i)=>`<button class="${i===0?'active':''}" id="snb-${i}" onclick="showSpread(${i})">${sc.pages}</button>`).join('');
+}
+
+function showSpread(idx){
+  S.currentSpread=idx;
+  document.querySelectorAll('.page-nav-wrap button').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  const sc=S.scenes[idx];
+  const panels=sc.panelData||[],prompts=sc.promptData||[],dialogues=sc.dialogueData||[];
+  const cols=panels.length<=2?'1fr':'1fr 1fr';
+  let html=`<div class="spread" style="grid-template-columns:${cols};">`;
+  panels.forEach((p,j)=>{
+    const pr=prompts.find(x=>x.panel_id===p.id)||{};
+    const dl=dialogues.find(x=>x.panel_id===p.id)||{};
+    const wide=p.size==='wide'||p.size==='full';
+    const h=wide?150:90;
+    html+=`<div class="panel-box" style="${wide?'grid-column:1/-1;':''}">
+      <div class="panel-label-b">${p.label||`コマ${j+1}`}</div>
+      <div class="panel-img" style="height:${h}px;">[ SD IMAGE ]</div>
+      <div class="panel-meta" style="font-size:9px;color:#555;">${p.desc||sc.title}<br><span style="font-family:monospace;font-size:8px;color:#aaa;">${(pr.positive||'').substring(0,60)}...</span></div>`;
+    if(dl.sfx)html+=`<div class="panel-sfx">${dl.sfx}</div>`;
+    if(dl.speech)html+=`<div class="panel-speech">${dl.speech}</div>`;
+    html+=`</div>`;
+  });
+  html+=`</div><div style="font-size:10px;color:#666;padding:4px;">${sc.pages} — ${sc.title} <span class="type-pill t-${sc.type}">${sc.type}</span> ${panels.length}コマ</div>`;
+  document.getElementById('spread-view').innerHTML=html;
+  document.getElementById('spread-pos').textContent=`${idx+1}/${S.scenes.length}`;
+}
+
+function prevScene(){if(S.currentSpread>0){showSpread(S.currentSpread-1);}}
+function nextScene(){if(S.currentSpread<S.scenes.length-1){showSpread(S.currentSpread+1);}}
+
+function buildPromptSelector(){
+  const sel=document.getElementById('prompt-scene-sel');
+  sel.innerHTML=S.scenes.map((sc,i)=>`<option value="${i}">${sc.pages} — ${sc.title}</option>`).join('');
+  showPromptScene(0);
+}
+
+function showPromptScene(idx){
+  const sc=S.scenes[+idx];
+  if(!sc)return;
+  let html='';
+  (sc.panelData||[]).forEach((p,j)=>{
+    const pr=(sc.promptData||[]).find(x=>x.panel_id===p.id)||{};
+    const pos=`${STYLE_BASE}${pr.positive||p.desc}`;
+    const neg=`${NEG_BASE}${pr.negative||GENRES[S.genre].negAdd}`;
+    html+=`<div class="prompt-card"><div class="pc-head"><div class="pc-title">${p.label||`コマ${j+1}`}</div><button class="btn-sm" onclick="navigator.clipboard.writeText('${pos.replace(/'/g,"\\'")}')">コピー</button></div><div class="pc-pos">${pos}</div><div class="pc-neg">NEG: ${neg}</div></div>`;
+  });
+  document.getElementById('prompt-panel-list').innerHTML=html||'データなし';
+}
+
+function copyScenePrompts(){
+  const idx=document.getElementById('prompt-scene-sel').value;
+  const sc=S.scenes[+idx];
+  if(!sc)return;
+  const text=(sc.panelData||[]).map((p,j)=>{
+    const pr=(sc.promptData||[]).find(x=>x.panel_id===p.id)||{};
+    return `=== ${p.label||`コマ${j+1}`} ===\nPOSITIVE: ${STYLE_BASE}${pr.positive||''}\nNEGATIVE: ${NEG_BASE}${pr.negative||}`;
+  }).join('\n\n');
+  navigator.clipboard.writeText(text).then(()=>alert('コピーしました！'));
+}
+
+function exportAllPrompts(){
+  if(!S.scenes.length){alert('先に生成してください');return;}
+  const text=S.scenes.flatMap(sc=>(sc.panelData||[]).map((p,j)=>{
+    const pr=(sc.promptData||[]).find(x=>x.panel_id===p.id)||{};
+    return `=== ${sc.pages} ${sc.title} — ${p.label||`コマ${j+1}`} ===\nPOSITIVE: ${STYLE_BASE}${pr.positive||''}\nNEGATIVE: ${NEG_BASE}${pr.negative||}`;
+  })).join('\n\n');
+  navigator.clipboard.writeText(text).then(()=>alert('全プロンプトをコピーしました！'));
+}
+
+function exportScript(){
+  if(!S.scenes.length){alert('先に生成してください');return;}
+  const text=S.scenes.map(sc=>`=== ${sc.pages} ${sc.title} ===\n`+(sc.dialogueData||[]).filter(d=>d.speech||d.thought||d.sfx).map((d,i)=>`  コマ${i+1}: ${d.speech?`「${d.speech}」`:''} ${d.thought?`（${d.thought}）`:''} ${d.sfx||''}`).join('\n')).join('\n\n');
+  navigator.clipboard.writeText(text).then(()=>alert('全セリフをコピーしました！'));
+}
+
+function exportPageMap(){
+  if(!S.scenes.length){alert('先に生成してください');return;}
+  const text=`【ページ構成マップ】\n${S.cfg.title} ${S.cfg.sub}\nジャンル：${GENRES[S.genre]?.name} / ${S.totalPages}P\n\n`+S.scenes.map(sc=>`${sc.pages.padEnd(10)} [${sc.type.padEnd(8)}] ${sc.title} (${sc.panelCount}コマ)`).join('\n');
+  navigator.clipboard.writeText(text).then(()=>alert('ページ構成マップをコピーしました！'));
+}
+
+function exportSDSettings(){
+  const s={model:'Anything V5 or CounterfeitXL',sampler:'DPM++ 2M Karras',steps:35,cfg_scale:7.5,sizes:{vertical:'768x1152',horizontal:'1152x768',spread:'1536x1024'},lora:['manga_lineart','detail_tweaker'],genre:S.genre?GENRES[S.genre].name:'未選択',total_pages:S.totalPages,fanza:{resolution:'350dpi',format:'PNG or JPEG',page_size:'B5 182x257mm'}};
+  navigator.clipboard.writeText(JSON.stringify(s,null,2)).then(()=>alert('SD設定JSONをコピーしました！'));
+}
+</script>
+</body>
+</html>
