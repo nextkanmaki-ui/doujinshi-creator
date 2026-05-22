@@ -2,22 +2,26 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/*.js",
+      "src": "deploy_package/api/*.js",
       "use": "@vercel/node"
     },
     {
-      "src": "public/**",
+      "src": "deploy_package/public/**",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "dest": "/deploy_package/api/$1"
+    },
+    {
+      "src": "/",
+      "dest": "/deploy_package/public/index.html"
     },
     {
       "src": "/(.*)",
-      "dest": "/public/$1"
+      "dest": "/deploy_package/public/$1"
     }
   ]
 }
