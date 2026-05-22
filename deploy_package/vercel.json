@@ -1,19 +1,14 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "deploy_package/api/*.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "deploy_package/public/**",
-      "use": "@vercel/static"
+  "functions": {
+    "api/claude.js": {
+      "runtime": "nodejs18.x"
     }
-  ],
+  },
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/deploy_package/api/$1"
+      "src": "/api/claude",
+      "dest": "/api/claude.js"
     },
     {
       "src": "/",
