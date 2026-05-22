@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/claude",
+      "destination": "/api/claude.js"
+    },
+    {
+      "source": "/",
+      "destination": "/deploy_package/public/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/deploy_package/public/$1"
+    }
+  ]
+}
